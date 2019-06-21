@@ -2,8 +2,11 @@
 
 namespace API\Domovita;
 
+use RuntimeException;
+use Dionchaika\Http\Uri;
 use Dionchaika\Http\Client\Client;
 use Dionchaika\Http\Factory\RequestFactory;
+use Psr\Http\Client\ClientExceptionInterface;
 
 /**
  * The API class for domovita.by.
@@ -30,6 +33,13 @@ class Domovita
      * @var bool
      */
     protected $loggedIn = false;
+
+    /**
+     * The CSRF-token.
+     *
+     * @var string
+     */
+    protected $csrfToken;
 
     /**
      * The API constructor.
@@ -73,6 +83,73 @@ class Domovita
      */
     public function login(string $user, string $password): void
     {
-        
+        $uri = new Uri('https://domovita.by/');
+        try {
+            $response = $this->client->sendRequest($this->factory->createRequest('GET', $uri));
+        } catch (ClientExceptionInterface $e) {
+            throw new RuntimeException($e->getMessage());
+        }
+
+        if (200 !== $response->getStatusCode()) {
+            throw new RuntimeException('Error loading page: '.$uri.'!');
+        }
+
+        if (!preg_match('/\<meta name\=\"csrf\-token\" content\=\"(.+)\"\>/', $response->getBody(), $matches)) {
+            throw new RuntimeException('Error getting the CSRF-token!');
+        }
+
+        $this->csrfToken = $matches[1];
+
+        $data = [
+
+            '_csrf'           => $this->csrfToken,
+            'isPush'          => 'false',
+            'AuthForm[view]'  => '_login_short',
+            'AuthForm[email]' => $user
+
+        ];
+
+        $uri = new Uri('https://domovita.by/user/sign-in/auth');
+        $request = $this->factory->createUrlencodedRequest('POST', $uri, $data)
+            ->withHeader('Accept', '*/*')
+            ->withHeader('X-CSRF-Token', $this->csrfToken)
+            ->withHeader('X-Requested-With', 'XMLHttpRequest');
+
+        try {
+            $response = $this->client->sendRequest($request);
+        } catch (ClientExceptionInterface $e) {
+            throw new RuntimeException($e->getMessage());
+        }
+
+        if (200 !== $response->getStatusCode()) {
+            throw new RuntimeException('Login error!');
+        }
+
+        $data = [
+
+            '_csrf'                      => $this->csrfToken,
+            'ShortLoginForm[password]'   => $password,
+            'ShortLoginForm[rememberMe]' => '0',
+            'ShortLoginForm[rememberMe]' => '1'
+
+        ];
+
+        $uri = new Uri('https://domovita.by/user/sign-in/short-login');
+        $request = $this->factory->createUrlencodedRequest('POST', $uri, $data)
+            ->withHeader('Accept', '*/*')
+            ->withHeader('X-CSRF-Token', $this->csrfToken)
+            ->withHeader('X-Requested-With', 'XMLHttpRequest');
+
+        try {
+            $response = $this->client->sendRequest($request);
+        } catch (ClientExceptionInterface $e) {
+            throw new RuntimeException($e->getMessage());
+        }
+
+        if (302 !== $response->getStatusCode()) {
+            throw new RuntimeException('Login error!');
+        }
+
+        $this->loggedIn = true;
     }
 }
