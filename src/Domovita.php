@@ -152,4 +152,16 @@ class Domovita
 
         $this->loggedIn = true;
     }
+
+    /**
+     * Log out.
+     *
+     * @return void
+     */
+    public function logout(): void
+    {
+        $this->loggedIn = false;
+        $this->csrfToken = null;
+        $this->client->getCookieStorage()->clearSessionCookies();
+    }
 }
