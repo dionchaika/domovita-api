@@ -1,0 +1,29 @@
+{
+    "name": "dionchaika/domovita-api",
+    "description": "The Unofficial domovita.by API",
+    "keywords": [
+        "php",
+        "api",
+        "domovita"
+    ],
+    "homepage": "https://github.com/dionchaika/domovita-api",
+    "version": "v1.0.0",
+    "type": "library",
+    "license": "MIT",
+    "authors": [
+        {
+            "name": "Dion Chaika",
+            "email": "dionchaika@gmail.com"
+        }
+    ],
+    "autoload": {
+        "psr-4": {
+            "API\\Domovita\\": "src/"
+        }
+    },
+    "prefer-stable": true,
+    "minimum-stability": "dev",
+    "require": {
+        "dionchaika/http": "dev-master"
+    }
+}
