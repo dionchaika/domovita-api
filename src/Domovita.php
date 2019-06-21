@@ -4,7 +4,9 @@ namespace API\Domovita;
 
 use RuntimeException;
 use Dionchaika\Http\Uri;
+use InvalidArgumentException;
 use Dionchaika\Http\Client\Client;
+use Dionchaika\Http\Utils\FormData;
 use Dionchaika\Http\Factory\RequestFactory;
 use Psr\Http\Client\ClientExceptionInterface;
 
@@ -163,5 +165,52 @@ class Domovita
         $this->loggedIn = false;
         $this->csrfToken = null;
         $this->client->getCookieStorage()->clearSessionCookies();
+    }
+
+    /**
+     * Upload an image.
+     *
+     * @param  string  $filename
+     * @return mixed[]
+     *
+     * @throws \RuntimeException
+     * @throws \InvalidArgumentException
+     */
+    public function uploadImage(string $filename): array
+    {
+        if (! $this->loggedIn) {
+            throw new RuntimeException('Client is not logged in!');
+        }
+
+        if (! file_exists($filename)) {
+            throw new InvalidArgumentException('File does not exists: '.$filename.'!');
+        }
+
+        if (10485760 < filesize($filename)) {
+            throw new InvalidArgumentException(
+                'File size can not be greater than 10 MB!'
+            );
+        }
+
+        $data = (new FormData)
+            ->append('images', '@'.$filename);
+
+        $uri = new Uri('https://domovita.by/ad/ajax-upload');
+        $request = $this->factory->createFormDataRequest('POST', $uri, $data)
+            ->withHeader('Accept', '*/*')
+            ->withHeader('X-CSRF-Token', $this->csrfToken)
+            ->withHeader('X-Requested-With', 'XMLHttpRequest');
+
+        try {
+            $response = $this->client->sendRequest($request);
+        } catch (ClientExceptionInterface $e) {
+            throw new RuntimeException($e->getMessage());
+        }
+
+        if (202 !== $response->getStatusCode()) {
+            throw new RuntimeException('Error uploading image!');
+        }
+
+        return json_decode($response->getBody(), \JSON_OBJECT_AS_ARRAY);
     }
 }
