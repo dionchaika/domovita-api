@@ -96,7 +96,7 @@ class Domovita
             throw new RuntimeException('Error loading page: '.$uri.'!');
         }
 
-        if (! preg_match('/\<meta name\=\"csrf\-token\" content\=\"(.+)\"\>/', $response->getBody(), $matches)) {
+        if (! preg_match('/\<meta name\=\"csrf\-token\" content\=\"([^"]+)\"\>/', $response->getBody(), $matches)) {
             throw new RuntimeException('Error getting the CSRF-token!');
         }
 
